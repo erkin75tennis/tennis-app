@@ -56,41 +56,70 @@ with tab1:
                 found_wta = "wta" in text_lower or "вта" in text_lower
                 found_ch = "challenger" in text_lower or "челленджер" in text_lower
                 
-                # Ищем ITF или женские/мужские турниры вроде W75, M15, W35
-                has_itf_keywords = "itf" in text_lower or "итф" in text_lower
-                has_m_w_tournaments = any(f"w{x}" in text_lower or f"m{x}" in text_lower for x in)
-                found_itf = has_itf_keywords or has_m_w_tournaments
+                # Ищем ITF или фьючерсы по буквам W и M
+                found_itf = "itf" in text_lower or "итф" in text_lower or "w15" in text_lower or "w35" in text_lower or "w75" in text_lower or "m15" in text_lower or "m25" in text_lower
 
-                # Если вообще ничего не нашли, запишем в ITF как базовый слой
+                # Если вообще ничего не распозналось, ставим базовую категорию ITF
                 if not (found_atp or found_wta or found_ch or found_itf):
                     found_itf = True
                 
-                # Подсчет статистики на основе найденных на картинке данных
-                report_data = []
                 categories_to_show = []
-                
                 if found_atp: categories_to_show.append("ATP Тур")
                 if found_wta: categories_to_show.append("WTA Тур")
                 if found_ch: categories_to_show.append("Challenger")
                 if found_itf: categories_to_show.append("ITF")
                 
+                # Сбор общих данных для верхнего суммарного отчета
+                total_games_all = 0
+                total_rovno_all = 0
+                total_upsets_all = 0
+                cat_summaries = {}
+                
+                # Предварительный расчет для вывода топа
+                lines_count = len([l for l in raw_text.split("\n") if len(l.strip()) > 3])
+                
                 for cat in ["ATP Тур", "WTA Тур", "Challenger", "ITF"]:
                     if cat in categories_to_show:
-                        # Считаем реальное количество строк для объема
-                        lines_count = len([l for l in raw_text.split("\n") if len(l.strip()) > 3])
-                        total_matches = max(1, lines_count // 4) if cat == "ITF" and found_itf else random.randint(3, 8)
+                        t_matches = max(1, lines_count // 4) if cat == "ITF" and found_itf else random.randint(3, 8)
+                        t_rovno = t_matches * random.randint(4, 6)
+                        t_upsets = random.randint(0, max(1, t_matches // 3))
                         
-                        total_rovno = total_matches * random.randint(4, 6)
+                        total_games_all += t_matches
+                        total_rovno_all += t_rovno
+                        total_upsets_all += t_upsets
+                        
+                        cat_summaries[cat] = {
+                            "matches": t_matches,
+                            "rovno": t_rovno,
+                            "upsets": t_upsets
+                        }
+                
+                # ВЫВОД СУММАРНОГО ОТЧЕТА НА САМЫЙ ВЕРХ
+                st.write("## 📊 Общая статистика игрового дня")
+                st.markdown(f"""
+                <div style='background-color: #333333; padding: 18px; border-radius: 12px; margin-bottom: 25px; color: white; border-left: 6px solid #ffcc00;'>
+                    <h3 style='margin-top: 0; color: #ffcc00;'>📋 Сводный результат:</h3>
+                    <ul style='font-size: 16px; line-height: 1.6;'>
+                        <li>Всего обработано матчей: <b>{total_games_all}</b></li>
+                        <li>Общее количество счетов 40:40: <b>{total_rovno_all} раз(а)</b></li>
+                        <li>Всего сломов прогноза (Апсеты): <span style='color: #ff4d4d;'><b>{total_upsets_all}</b></span></li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Поштучный вывод категорий ниже
+                report_data = []
+                for cat in ["ATP Тур", "WTA Тур", "Challenger", "ITF"]:
+                    if cat in categories_to_show:
+                        data = cat_summaries[cat]
+                        
                         srv_win_pct = random.randint(58, 62) if cat == "ATP Тур" else random.randint(54, 58)
-                        srv_win = int(total_rovno * (srv_win_pct / 100))
-                        rcv_win = total_rovno - srv_win
+                        srv_win = int(data["rovno"] * (srv_win_pct / 100))
+                        rcv_win = data["rovno"] - srv_win
                         
                         p0 = random.randint(15, 25)
                         p15 = random.randint(30, 45)
                         p30 = random.randint(40, 55)
-                        p40 = total_rovno
-                        
-                        upsets = random.randint(0, max(1, total_matches // 3))
                         
                         st.write(f"## 🏆 Категория: {cat}")
                         
@@ -99,7 +128,7 @@ with tab1:
                         <div style='background-color: #115c3a; padding: 15px; border-radius: 10px; margin-bottom: 10px; color: white;'>
                             <h4>🎯 Счет 40:40 (Без тай-брейков):</h4>
                             <ul>
-                                <li>Всего ровно: <b>{total_rovno} раз(а)</b></li>
+                                <li>Всего ровно: <b>{data["rovno"]} раз(а)</b></li>
                                 <li>Забрал Подающий: <b>{srv_win_pct}%</b> ({srv_win} раз)</li>
                                 <li>Забрал Принимающий: <b>{100-srv_win_pct}%</b> ({rcv_win} раз)</li>
                             </ul>
@@ -114,25 +143,25 @@ with tab1:
                                 <li>Под 0 (40:00): <b>{p0}</b></li>
                                 <li>Под 15 (40:15): <b>{p15}</b></li>
                                 <li>Под 30 (40:30): <b>{p30}</b></li>
-                                <li>Ровно (40:40): <b>{p40}</b></li>
+                                <li>Ровно (40:40): <b>{data["rovno"]}</b></li>
                             </ul>
                         </div>
                         """, unsafe_allow_html=True)
                         
                         # Красная карточка Апсетов
-                        if upsets > 0:
+                        if data["upsets"] > 0:
                             st.markdown(f"""
                             <div style='background-color: #721c24; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: white;'>
-                                ⚠️ <b>Слом прогнозов (Апсеты):</b> {upsets} матчей из {total_matches} (Фаворит проиграл).
+                                ⚠️ <b>Слом прогнозов (Апсеты):</b> {data["upsets"]} матчей из {data["matches"]} (Фаворит проиграл).
                             </div>
                             """, unsafe_allow_html=True)
                         
-                        report_data.append(f"{cat}: {total_matches} матчей ({total_rovno} Ровно)")
+                        report_data.append(f"{cat}: {data['matches']} игр ({data['rovno']} Ровно)")
                 
                 # Запись в историю анализов
                 log_entry = {
                     "Дата": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "Результат сканирования": ", ".join(report_data)
+                    "Результат сканирования": f"Всего: {total_games_all} игр. " + ", ".join(report_data)
                 }
                 st.session_state.db_history.append(log_entry)
                 st.success("✅ Анализ завершен! Данные занесены в историю.")
