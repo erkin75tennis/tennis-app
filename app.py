@@ -56,7 +56,7 @@ with tab1:
                 found_wta = "wta" in text_lower or "вта" in text_lower
                 found_ch = "challenger" in text_lower or "челленджер" in text_lower
                 
-                # Ищем ITF или фьючерсы по буквам W и M
+                # Ищем ITF или фьючерсы по ключевым буквам
                 found_itf = "itf" in text_lower or "итф" in text_lower or "w15" in text_lower or "w35" in text_lower or "w75" in text_lower or "m15" in text_lower or "m25" in text_lower
 
                 # Если вообще ничего не распозналось, ставим базовую категорию ITF
